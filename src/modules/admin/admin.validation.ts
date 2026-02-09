@@ -75,3 +75,46 @@ export const createBuildingValidation = [
     .isLength({ max: 255 })
     .withMessage('Address must not exceed 255 characters'),
 ];
+
+export const createUserValidation = [
+  body('email')
+    .isEmail()
+    .withMessage('Please provide a valid email')
+    .normalizeEmail(),
+  body('password')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters')
+    .matches(/[A-Z]/)
+    .withMessage('Password must contain at least one uppercase letter')
+    .matches(/[a-z]/)
+    .withMessage('Password must contain at least one lowercase letter')
+    .matches(/[0-9]/)
+    .withMessage('Password must contain at least one number')
+    .matches(/[!@#$%^&*(),.?":{}|<>]/)
+    .withMessage('Password must contain at least one special character'),
+  body('firstName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('First name must be between 2 and 100 characters'),
+  body('lastName')
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Last name must be between 2 and 100 characters'),
+  body('role')
+    .isIn(['ADMIN', 'TECHNICIAN', 'DOCTOR', 'STUDENT'])
+    .withMessage('Role must be one of: ADMIN, TECHNICIAN, DOCTOR, STUDENT'),
+  body('isVerified')
+    .optional()
+    .isBoolean()
+    .withMessage('isVerified must be a boolean value'),
+  body('isActive')
+    .optional()
+    .isBoolean()
+    .withMessage('isActive must be a boolean value'),
+];
+
+export const deleteUserValidation = [
+  param('id')
+    .isUUID()
+    .withMessage('User ID must be a valid UUID'),
+];

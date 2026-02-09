@@ -3,10 +3,82 @@ import { userRepository } from '@modules/users/user.repository';
 import { technicianRepository, buildingRepository } from './admin.repository';
 import { otpService } from '@modules/otp/otp.service';
 import { validatePassword, sanitizeUser } from '@utils/validation.util';
-import { CreateTechnicianDTO, UserResponse } from '@/types';
+import { CreateTechnicianDTO, UserResponse, RoleName } from '@/types';
 import { logger } from '@config/logger';
 
+export interface CreateUserDTO {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: RoleName;
+  isVerified?: boolean;
+  isActive?: boolean;
+}
+
 export class AdminService {
+  async createUser(data: CreateUserDTO): Promise<{
+    success: boolean;
+    message: string;
+    user?: any;
+  }> {
+    const {
+      email,
+      password,
+      firstName,
+      lastName,
+      role,
+      isVerified = true, // Default to verified since admin creates them
+      isActive = true,   // Default to active
+    } = data;
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.valid) {
+      return {
+        success: false,
+        message: `Password validation failed: ${passwordValidation.errors.join(', ')}`,
+      };
+    }
+
+    // Check if user already exists
+    const existingUser = await userRepository.findByEmail(email);
+    if (existingUser) {
+      return {
+        success: false,
+        message: 'User with this email already exists',
+      };
+    }
+
+    // Hash password and create user
+    const passwordHash = await bcrypt.hash(password, 12);
+    const user = await userRepository.create({
+      email,
+      passwordHash,
+      firstName,
+      lastName,
+      isVerified,
+      isActive,
+    });
+
+    // Assign role
+    await userRepository.assignRole(user.id, role);
+
+    // Get user with roles
+    const userWithRoles = await userRepository.findByIdWithRoles(user.id);
+
+    logger.info(`Admin created new user: ${email} with role ${role}`);
+
+    return {
+      success: true,
+      message: 'User created successfully',
+      user: sanitizeUser({
+        ...userWithRoles!,
+        roles: userWithRoles!.roles.map(r => r.name),
+      }),
+    };
+  }
+
   async createTechnician(data: CreateTechnicianDTO): Promise<{
     success: boolean;
     message: string;
@@ -212,6 +284,39 @@ export class AdminService {
       success: true,
       message: 'Building created successfully',
       building,
+    };
+  }
+
+  async deleteUser(userId: string): Promise<{
+    success: boolean;
+    message: string;
+  }> {
+    // Check if user exists
+    const user = await userRepository.findByIdWithRoles(userId);
+    if (!user) {
+      return {
+        success: false,
+        message: 'User not found',
+      };
+    }
+
+    // Prevent deleting admin users (safety check)
+    const isAdmin = user.roles.some(r => r.name === 'ADMIN');
+    if (isAdmin) {
+      return {
+        success: false,
+        message: 'Cannot delete admin users',
+      };
+    }
+
+    // Delete the user and all associated data
+    await userRepository.delete(userId);
+
+    logger.info(`User ${userId} (${user.email}) deleted by admin`);
+
+    return {
+      success: true,
+      message: 'User deleted successfully',
     };
   }
 }

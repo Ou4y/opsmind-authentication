@@ -49,13 +49,14 @@ export class UserRepository {
     firstName: string;
     lastName: string;
     isVerified?: boolean;
+    isActive?: boolean;
   }): Promise<User> {
     const id = uuidv4();
     
     await query(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, is_verified, is_active)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.email, data.passwordHash, data.firstName, data.lastName, data.isVerified || false, true]
+      [id, data.email, data.passwordHash, data.firstName, data.lastName, data.isVerified || false, data.isActive !== undefined ? data.isActive : true]
     );
 
     return this.findById(id) as Promise<User>;
@@ -133,6 +134,27 @@ export class UserRepository {
         return { ...user, roles };
       })
     );
+  }
+
+  async delete(userId: string): Promise<void> {
+    // Delete in order to respect foreign key constraints
+    // 1. Delete OTPs
+    await query('DELETE FROM email_otps WHERE user_id = ?', [userId]);
+    
+    // 2. Delete user roles
+    await query('DELETE FROM user_roles WHERE user_id = ?', [userId]);
+    
+    // 3. Delete technician building assignments (if technician)
+    await query(
+      'DELETE FROM technician_buildings WHERE technician_id IN (SELECT id FROM technicians WHERE user_id = ?)',
+      [userId]
+    );
+    
+    // 4. Delete technician profile (if exists)
+    await query('DELETE FROM technicians WHERE user_id = ?', [userId]);
+    
+    // 5. Finally delete the user
+    await query('DELETE FROM users WHERE id = ?', [userId]);
   }
 }
 
