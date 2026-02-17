@@ -69,6 +69,8 @@ const migrations: string[] = [
     employee_id VARCHAR(50) UNIQUE,
     department VARCHAR(100),
     specialization VARCHAR(255),
+    level ENUM('JUNIOR','SENIOR','SUPERVISOR','HEAD') NOT NULL DEFAULT 'JUNIOR',
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_user_id (user_id),
@@ -94,6 +96,7 @@ const alterTableMigrations: string[] = [
   `ALTER TABLE roles ADD COLUMN description VARCHAR(255)`,
   `ALTER TABLE roles ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
   `ALTER TABLE roles ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`,
+  `ALTER TABLE technicians ADD COLUMN level ENUM('JUNIOR','SENIOR','SUPERVISOR','HEAD') NOT NULL DEFAULT 'JUNIOR'`,
 
   // Fix buildings table - expand code column and add missing columns
   `ALTER TABLE buildings MODIFY code VARCHAR(20) NOT NULL`,
@@ -117,6 +120,7 @@ const alterTableMigrations: string[] = [
   `ALTER TABLE technicians ADD COLUMN id VARCHAR(36) FIRST`,
   `ALTER TABLE technicians ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`,
   `ALTER TABLE technicians ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`,
+  `ALTER TABLE technicians ADD COLUMN level ENUM('JUNIOR','SENIOR','SUPERVISOR','HEAD') NOT NULL DEFAULT 'JUNIOR'`,
 
   // Fix technician_buildings table - add missing columns if they don't exist
   `ALTER TABLE technician_buildings ADD COLUMN id VARCHAR(36) FIRST`,
